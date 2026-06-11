@@ -1,0 +1,15 @@
+# Dependencies and VCS
+node_modules
+.git
+.gitignore
+
+# Runtime data (mounted as volumes)
+temp/
+
+# Local env/secrets
+.env
+
+# OS/editor artifacts
+.DS_Store
+Thumbs.db
+.vscode/

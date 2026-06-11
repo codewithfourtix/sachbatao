@@ -1,0 +1,11 @@
+node_modules/
+.env
+temp/audio/*
+temp/sessions/*
+temp/logs/*
+!temp/audio/.gitkeep
+!temp/sessions/.gitkeep
+!temp/logs/.gitkeep
+.wwebjs_cache/
+*.log
+response*.mp3

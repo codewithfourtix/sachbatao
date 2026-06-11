@@ -1,0 +1,15 @@
+services:
+  fraud-detection:
+    build: .
+    container_name: whatsapp-fraud-detector
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./temp/sessions:/app/temp/sessions
+      - ./temp/audio:/app/temp/audio
+      - ./temp/logs:/app/temp/logs
+    stdin_open: true
+    tty: true
+    # host networking works on Linux; on Windows/Mac remove this (bridge network is used)
+    # network_mode: host
