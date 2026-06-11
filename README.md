@@ -1,96 +1,175 @@
-# WhatsApp Fraud Detection System
+<div align="center">
 
-Urdu/English fraud detection assistant over WhatsApp. All AI runs through **OpenRouter** — one API key for LLM, speech-to-text, and text-to-speech.
+<!-- LOGO -->
+<img src="./assets/logo.png" alt="sayNoToFraud logo" width="120" />
 
-## Features
+<h1>sayNoToFraud</h1>
 
-- WhatsApp Web integration via `whatsapp-web.js` (QR login, session persistence)
-- Voice notes: download → convert → OpenRouter Whisper → LLM → OpenRouter TTS voice reply
-- Text messages: OpenRouter LLM analysis → Urdu text reply
-- Fraud types: bank impersonation, OTP theft, emergency scams, link fraud, prize scams, relative impersonation
-- High-risk webhook alerts (optional)
-- Audit logging to `temp/logs/`
-- Docker-ready with Chromium and ffmpeg
+<p>
+  <strong>A lightweight, production-ready WhatsApp bot in Node.js for Urdu fraud detection.</strong><br/>
+  Protects users by intercepting WhatsApp text messages and voice notes, analyzing them for scams, and replying with clear warnings.
+</p>
 
-## Cost (default models)
+<!-- BADGES -->
 
-| Step | Model | Approx. cost |
-|------|-------|--------------|
-| Text fraud check | `google/gemini-2.0-flash-lite-001` | ~$0.0001 / message |
-| Voice transcription | `openai/whisper-1` | $0.006 / minute |
-| Voice reply | `hexgrad/kokoro-82m` | ~$0.0002 / reply |
+![NodeJS](https://img.shields.io/badge/Node.js-18+-339933?style=flat-square&logo=node.js&logoColor=white)
+![OpenRouter](https://img.shields.io/badge/OpenRouter-API-bf5b0a?style=flat-square)
+![License](https://img.shields.io/badge/License-MIT-10b981?style=flat-square)
+![Status](https://img.shields.io/badge/Status-Active-00d9ff?style=flat-square)
 
-**~1000 text checks ≈ $0.10** · **~100 voice notes (30s each) ≈ $0.50**
+</div>
 
-Set `OPENROUTER_LLM_MODEL=openrouter/free` for zero-cost LLM (less reliable).
+---
 
-## Quick Start
+## What is this?
+
+**sayNoToFraud** is a WhatsApp security assistant designed to protect citizens from common Pakistani scams (fake e-challans, courier OTP hijacking, emergency/kidnapping scams, lottery fraud, and BISP/Ehsaas program scams).
+
+It automatically intercepts incoming text messages and voice notes, transcribes the voice notes, uses OpenRouter LLM APIs to detect suspicious patterns, and replies back with a localized Urdu script response. Voice note responses are generated using high-quality Google TTS.
+
+---
+
+## Bypassing Expensive APIs (Our Approach)
+
+Traditional WhatsApp bots require setting up the official **Meta WhatsApp Business API** or third-party gateways like **Twilio**. These official channels have severe constraints:
+* **High Cost:** Meta charges per conversation, which makes running a free public safety bot financially impossible.
+* **Strict Approvals:** Official templates require manual review, and Meta does not allow free-form scanning of forwarded messages.
+* **Burdensome Setup:** Registering a business account, getting verified, and setting up webhooks takes days or weeks.
+
+**Our Bypass Solution:**
+We bypass all official business APIs and Twilio entirely. By utilizing a virtual WhatsApp Web client (`whatsapp-web.js`), the bot logs in exactly like a regular web client. You simply start the bot, scan the generated **QR Code** in your terminal using your phone, and the bot connects as a linked device. It reads, transcribes, and responds to messages completely free of charge.
+
+---
+
+## Why Docker is Critical
+
+Running headless browser automation and native audio conversion on a remote server is notoriously difficult. This application would **not be possible without Docker** for two main reasons:
+
+1. **Headless Chromium & Puppeteer:** WhatsApp Web automation requires Puppeteer to run a background browser. On a standard VPS/Linux server, Puppeteer frequently crashes due to missing OS-level display and system libraries. Our Docker container bundles Chromium with all necessary shared libraries pre-configured.
+2. **Audio Conversion (`ffmpeg`):** To support voice notes, we download and convert WhatsApp Opus audio (.ogg) to MP3 for STT and back. Docker ensures `ffmpeg` and its static libraries are pre-packaged and available on the system path, avoiding manual codec compilation on the server.
+
+---
+
+
+## Features & Fraud Coverage
+
+The bot is powered by a localized scam database and classification system targeting:
+
+| Scam Category | Target | Indicator |
+| --- | --- | --- |
+| **Fake E-Challan** | Traffic Fine Scam | Asks for payment on fake sites (non-.gov.pk) |
+| **Courier OTP** | WhatsApp Hijacking | Requests 6-digit codes to "release packages" |
+| **Fake Kidnapping** | Emergency Impersonation | Demands fast money transfer (Easypaisa/JazzCash) |
+| **Fake BISP** | Benazir Income Support | Demands "verification fees" for government aid |
+| **Jeeto Pakistan** | Lucky Draw / SIM Lottery | Claims you won prizes you never entered |
+
+---
+
+## Cost Efficiency (Default Config)
+
+The system is optimized for minimal runtime cost:
+
+| Component | Provider / Model | Approximate Cost |
+| --- | --- | --- |
+| **LLM Analysis** | `google/gemini-2.0-flash-lite-001` | ~$0.0001 / check |
+| **Voice Transcription** | `openai/whisper-1` | ~$0.003 / 30s voice note |
+| **Voice Synthesis** | `Google TTS (Native Urdu)` | **Free** |
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+- **Node.js** (v18 or higher)
+- **Ffmpeg** installed on your system path (or run via Docker)
+
+### 1. Clone the repository
 
 ```bash
-cd fraud-detection-wa
+git clone https://github.com/codewithfourtix/sayNoToFraud.git
+cd sayNoToFraud
+```
+
+### 2. Configure Environment
+
+Copy `.env.example` and set your OpenRouter API key:
+
+```bash
 cp .env.example .env
-# Edit .env — set OPENROUTER_API_KEY
+```
 
+Open `.env` and set:
+```env
+OPENROUTER_API_KEY=your_openrouter_api_key_here
+```
+
+### 3. Install Dependencies
+
+```bash
 npm install
+```
+
+### 4. Run the Server
+
+```bash
 npm start
-
-# Or Docker
-docker-compose up --build
 ```
 
-Scan the QR code printed in the terminal with WhatsApp → Linked Devices.
+Once running, scan the generated **QR code** in your terminal using your mobile device's WhatsApp app (Settings -> Linked Devices).
 
-## Environment Variables
+---
 
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `OPENROUTER_API_KEY` | **Yes** | — | Single key for all AI |
-| `OPENROUTER_LLM_MODEL` | No | `google/gemini-2.0-flash-lite-001` | Fraud analysis |
-| `OPENROUTER_STT_MODEL` | No | `openai/whisper-1` | Voice → text |
-| `OPENROUTER_TTS_MODEL` | No | `hexgrad/kokoro-82m` | Text → voice |
-| `OPENROUTER_TTS_VOICE` | No | `hf_alpha` | Hindi female (Urdu text) |
-| `FRAUD_ALERT_WEBHOOK` | No | — | High-risk alert URL |
-| `SESSION_STORAGE` | No | `./temp/sessions` | WhatsApp session path |
+## Docker Deployment
 
-## Message Flow
+To run the bot in a headless container environment:
 
-```
-Text  → OpenRouter LLM → Text reply
-Voice → OpenRouter Whisper → OpenRouter LLM → OpenRouter TTS → Voice reply
+```bash
+# Build the container
+docker-compose build
+
+# Start the bot
+docker-compose up -d
+
+# Check live logs & QR code
+docker logs -f whatsapp-fraud-detector
 ```
 
-## Test Cases
-
-| Input | Message (Urdu) | Expected |
-|-------|----------------|----------|
-| Text | میں بینک سے بول رہا ہوں، OTP بھیجو | FRAUD |
-| Voice | میرا بیٹا ہسپتال میں ہے، فوری 50,000 روپے بھیجو | FRAUD |
-| Text | کل ملتے ہیں، نماز کے بعد | SAFE |
-| Voice | یہ لنک کھولیں اور اپنا پن ڈالیں | FRAUD |
+---
 
 ## Project Structure
 
 ```
-src/
-  index.js              # Orchestrator
-  openrouter-client.js  # Single OpenRouter API client
-  whatsapp-client.js    # WhatsApp Web client
-  fraud-detector.js     # LLM fraud analysis
-  audio-processor.js    # Voice file handling + ffmpeg
-  stt-service.js        # OpenRouter STT
-  tts-service.js        # OpenRouter TTS
-  config.js             # Config & prompts
-  logger.js             # Audit trail
+sayNoToFraud/
+├── assets/
+│   └── logo.png             # Project logo
+├── src/
+│   ├── index.js             # Main orchestrator
+│   ├── whatsapp-client.js   # WhatsApp web client wrapper
+│   ├── fraud-detector.js    # LLM wrapper & analysis logic
+│   ├── tts-service.js       # Google TTS wrapper for Urdu voice notes
+│   ├── stt-service.js       # OpenRouter Whisper STT integration
+│   ├── audio-processor.js   # Ffmpeg format conversions
+│   ├── config.js            # Configuration settings & fallback templates
+│   ├── logger.js            # Audit and logs recorder
+│   └── urdu-to-hindi.js     # Text normalization helpers
+├── scam_patterns.json       # Scam category database (patterns & keywords)
+├── system_prompt.txt        # LLM system behavior instructions & JSON schema
+├── test_messages.json       # Verification test suite datasets
+├── test-runner.js           # Local test runner script
+├── Dockerfile               # Docker specification
+├── docker-compose.yml       # Docker orchestration config
+└── package.json             # Node dependencies and scripts
 ```
 
-## Docker Notes
+---
 
-- Session data is persisted in `./temp/sessions`
-- `network_mode: host` works on **Linux**; on Windows Docker Desktop, remove it if connections fail
+## License
 
-## Logs
+MIT — feel free to modify and share!
 
-```bash
-docker logs -f whatsapp-fraud-detector
-# Audit logs: temp/logs/audit-YYYY-MM-DD.log
-```
+---
+
+<div align="center">
+  <sub>Built for community safety. Keep your family secure.</sub>
+</div>
