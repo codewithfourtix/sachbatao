@@ -1,5 +1,7 @@
 const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
+const QRCode = require('qrcode');
+const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const ffmpeg = require('fluent-ffmpeg');
@@ -13,6 +15,7 @@ class WhatsAppClient {
   
   constructor(messageHandler) {
     this.messageHandler = messageHandler;
+    this.latestQR = null;
     this.client = new Client({
       authStrategy: new LocalAuth({
         dataPath: config.sessionStorage,
@@ -34,11 +37,12 @@ class WhatsAppClient {
 
   setupEventHandlers() {
     this.client.on('qr', (qr) => {
-      qrcode.generate(qr, { small: true });
-      logger.info('QR code generated — scan with WhatsApp mobile app');
+      this.latestQR = qr;
+      logger.info('QR code generated — visit your Railway URL to scan it');
     });
 
     this.client.on('authenticated', () => {
+      this.latestQR = null;
       logger.info('WhatsApp authenticated');
     });
 
@@ -81,6 +85,27 @@ class WhatsAppClient {
 
   async initialize() {
     logger.info('Initializing WhatsApp client', { sessionStorage: config.sessionStorage });
+
+    const port = process.env.PORT || 3000;
+
+    http.createServer(async (req, res) => {
+      try {
+        if (this.latestQR) {
+          const img = await QRCode.toBuffer(this.latestQR);
+          res.writeHead(200, { 'Content-Type': 'image/png' });
+          res.end(img);
+        } else {
+          res.writeHead(200, { 'Content-Type': 'text/html' });
+          res.end('<h2>✅ Already authenticated — bot is running!</h2><p>No QR needed.</p>');
+        }
+      } catch (err) {
+        res.writeHead(500, { 'Content-Type': 'text/plain' });
+        res.end('Error generating QR: ' + err.message);
+      }
+    }).listen(port, () => {
+      logger.info(`QR server listening on port ${port}`);
+    });
+
     await this.client.initialize();
   }
 
