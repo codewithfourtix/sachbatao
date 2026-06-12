@@ -1,0 +1,337 @@
+{
+  "version": "2.0",
+  "last_updated": "2026-06-10",
+  "changes": "Urdu-first responses; expanded trigger phrases; added example_bot_response_ur per category; voice-call script patterns added",
+  "categories": [
+    {
+      "id": "fake_echallan",
+      "name_en": "Fake E-Challan Scam",
+      "name_ur": "جعلی ای چالان فراڈ",
+      "official_facts": [
+        "PSCA e-challan alerts come ONLY from short codes 9915 / 8070",
+        "Official messages NEVER contain payment links",
+        "PSCA never asks for online payment, bank or card details via SMS",
+        "Real verification only at echallan.psca.gop.pk (.gov.pk domain)",
+        "Payment only via e-Pay Punjab app (PSID), or helpline 15 option 6",
+        "Real PSCA messages never use urgency words"
+      ],
+      "red_flags": [
+        "Sent from a normal mobile number (03xx...) instead of 9915/8070",
+        "Contains any clickable payment link",
+        "Domain is NOT .gov.pk (psca-echallan.com, echallan-pk.online, e-challan.site)",
+        "Urgency: 'within 24 hours', 'foran', 'فوری ادا کریں'",
+        "Asks for card number, CVV, expiry, or bank login",
+        "Threatens license cancellation, FIR, or arrest"
+      ],
+      "trigger_keywords": [
+        "e-challan",
+        "echallan",
+        "challan",
+        "chalan",
+        "PSCA",
+        "traffic fine",
+        "violation",
+        "چالان",
+        "جرمانہ",
+        "گاڑی",
+        "license cancel",
+        "ای چالان"
+      ],
+      "trigger_phrases": [
+        "pay your pending challan",
+        "challan ada karain",
+        "چالان ادا کریں",
+        "license cancel ho jaye ga",
+        "لائسنس منسوخ",
+        "qanooni karwai",
+        "قانونی کارروائی",
+        "click below to pay",
+        "payment link",
+        "neeche diye gaye link par",
+        "apki gari par challan",
+        "آپ کی گاڑی پر چالان",
+        "vehicle violation detected"
+      ],
+      "sample_scam_messages": [
+        "PSCA Alert: Your vehicle LEB-1234 has unpaid e-challan of Rs 2000. Pay urgently within 24hrs to avoid license cancellation: http://psca-echallan.com/pay",
+        "Dear citizen apki gari par challan hai. Foran ada karain warna qanooni karwai hogi. Payment link: echallan-pk.online/pay?id=8821",
+        "آپ کی گاڑی نمبر LEA-5566 پر 5000 روپے کا چالان ہے۔ 24 گھنٹے میں ادائیگی کریں ورنہ لائسنس منسوخ کر دیا جائے گا۔ ادائیگی کا لنک: psca-pay.com"
+      ],
+      "example_bot_response_ur": "*فراڈ ہے!*\n*قسم:* جعلی ای چالان فراڈ\n*خطرے کی نشانیاں:*\n• لنک \"psca-echallan.com\" — اصلی چالان میں لنک نہیں ہوتا۔\n• جلدی کا مطالبہ — سرکاری چالان میں جلدی نہیں ڈالی جاتی۔\n• عام موبائل نمبر سے پیغام آیا ہے۔\n*ابھی کیا کریں:*\n1. لنک نہ کھولیں، ادائیگی نہ کریں۔\n2. تصدیق صرف echallan.psca.gop.pk پر کریں۔\n3. فیا (FIA) کو رپورٹ کریں۔\n_یہ پیغام گھر والوں کو بھی بھیجیں_",
+      "what_to_do_ur": "لنک پر کلک نہ کریں، ادائیگی نہ کریں۔ صرف echallan.psca.gop.pk پر تصدیق کریں۔ اصلی چالان صرف 9915/8070 سے آتا ہے۔",
+      "sources": [
+        "https://www.dawn.com/news/1981854",
+        "https://www.dawn.com/news/1960091",
+        "https://www.dawn.com/news/1959949",
+        "https://tribune.com.pk/story/2595494"
+      ]
+    },
+    {
+      "id": "courier_otp",
+      "name_en": "Courier OTP / WhatsApp Hijack Scam",
+      "name_ur": "کورئیر / او ٹی پی فراڈ",
+      "official_facts": [
+        "No courier (TCS, Leopards, M&P, Trax, Pakistan Post) ever asks for an OTP or WhatsApp code",
+        "NCCIA: no legitimate institution EVER asks for an OTP",
+        "A WhatsApp code shared = WhatsApp account stolen; hacker then begs money from all contacts",
+        "DRF documented 233 WhatsApp hijack cases since Jan 2025; fake HEC degree-verification calls are a known variant"
+      ],
+      "red_flags": [
+        "Claims to be courier rider/office (TCS, Leopards, Daraz delivery) or HEC",
+        "Asks to 'confirm delivery' by reading back a code from your SMS",
+        "Asks for ANY 6-digit code / OTP / 'verification number' / تصدیقی کوڈ",
+        "Says parcel is stuck, address unclear, or 'galat address par chala gaya'",
+        "Fake HEC: degree needs 'urgent verification' via code",
+        "Caller says 'maine ghalti se apke number par code bhej diya, wapis bhej dein'"
+      ],
+      "trigger_keywords": [
+        "OTP",
+        "code",
+        "verification code",
+        "TCS",
+        "Leopards",
+        "courier",
+        "parcel",
+        "delivery",
+        "rider",
+        "کوڈ",
+        "پارسل",
+        "ڈیلیوری",
+        "HEC",
+        "تصدیقی",
+        "six digit",
+        "6 digit"
+      ],
+      "trigger_phrases": [
+        "code batain",
+        "کوڈ بتائیں",
+        "share the code",
+        "code wapis bhej dein",
+        "ghalti se code chala gaya",
+        "غلطی سے کوڈ چلا گیا",
+        "delivery confirm karne k liye",
+        "ڈیلیوری کنفرم کرنے کے لیے",
+        "apke number par aya code",
+        "آپ کے نمبر پر آیا کوڈ",
+        "degree verification pending",
+        "ڈگری کی تصدیق"
+      ],
+      "sample_scam_messages": [
+        "TCS: Apka parcel deliver nahi ho saka. Delivery confirm karne k liye apke number par aya 6-digit code humein batain.",
+        "Assalamualaikum, main Daraz rider bol raha hun, apka address confirm nahi ho raha. Apke phone par ek code aya hoga wo bata dein to parcel bhej dun.",
+        "بھائی معذرت، میں نے غلطی سے اپنا کوڈ آپ کے نمبر پر بھیج دیا ہے، وہ مجھے واپس بھیج دیں بڑی مہربانی ہوگی"
+      ],
+      "example_bot_response_ur": "*فراڈ ہے!*\n*قسم:* کورئیر / او ٹی پی فراڈ\n*خطرے کی نشانیاں:*\n• \"او ٹی پی (OTP) بتائیں\" — کوئی کورئیر کمپنی کوڈ نہیں مانگتی۔\n• کوڈ دینے سے آپ کا واٹس ایپ ہیک ہو سکتا ہے۔\n*ابھی کیا کریں:*\n1. کسی کو بھی تصدیقی کوڈ نہ بتائیں۔\n2. واٹس ایپ پر Two-Step Verification آن کریں۔\n3. نمبر بلاک کریں۔\n_یہ پیغام گھر والوں کو بھی بھیجیں_",
+      "what_to_do_ur": "کوئی کوڈ کبھی شیئر نہ کریں۔ دے چکے ہیں تو فوری Two-Step Verification آن کریں اور رابطوں کو خبردار کریں۔",
+      "sources": [
+        "https://www.dawn.com/news/1927824",
+        "https://www.samaa.tv/2087343243-nccia-warns-public-against-whatsapp-fraud-fake-calls",
+        "https://www.techjuice.pk/pakistan-raises-red-flag-as-meta-cracks-whatsapp-scams/"
+      ]
+    },
+    {
+      "id": "fake_kidnapping",
+      "name_en": "Fake Kidnapping / Emergency Call Scam",
+      "name_ur": "جعلی اغوا / ہنگامی کال فراڈ",
+      "official_facts": [
+        "Scammers call claiming a family member is kidnapped/arrested/in an accident and demand instant transfer",
+        "They use crying sounds, background shouting, and refuse to let you talk to the person",
+        "NCCIA: scammers falsely use police/Army/FIA names to intimidate",
+        "Real police never demand money over the phone to 'close a case'"
+      ],
+      "red_flags": [
+        "Family member kidnapped / arrested / accident claim",
+        "Demands IMMEDIATE Easypaisa/JazzCash/bank transfer",
+        "Demands secrecy: 'kisi ko mat batana' / 'police ko bataya to...'",
+        "Won't let you speak to the family member, or plays vague crying",
+        "Claims to be police/FIA/Army demanding money to end a case",
+        "Keeps you on the line: 'phone band mat karna'"
+      ],
+      "trigger_keywords": [
+        "kidnap",
+        "aghwa",
+        "اغوا",
+        "beta",
+        "بیٹا",
+        "بیٹی",
+        "ransom",
+        "tawan",
+        "تاوان",
+        "thana",
+        "تھانہ",
+        "police case",
+        "accident",
+        "حادثہ",
+        "FIR",
+        "گرفتار",
+        "arrest"
+      ],
+      "trigger_phrases": [
+        "tumhara beta hamare paas hai",
+        "تمہارا بیٹا ہمارے پاس ہے",
+        "kisi ko mat batana",
+        "کسی کو مت بتانا",
+        "police ko bataya to",
+        "foran paise bhejo",
+        "فوری پیسے بھیجو",
+        "abhi transfer karo",
+        "case khatam karne k liye",
+        "کیس ختم کرنے کے لیے",
+        "phone band mat karna",
+        "فون بند مت کرنا",
+        "beta accident me hai",
+        "بیٹا حادثے میں ہے",
+        "FIR ho jaye gi"
+      ],
+      "sample_scam_messages": [
+        "Tumhara beta hamare paas hai. Agar usay zinda dekhna chahte ho to foran 2 lakh is JazzCash number par bhejo. Police ko bataya to anjaam bura hoga.",
+        "Sir main thana se bol raha hun apka beta accident case me pakra gaya hai. Case khatam karne k liye foran 50,000 transfer karain warna FIR ho jaye gi.",
+        "ابو میں مصیبت میں ہوں، یہ لوگ مجھے چھوڑ نہیں رہے، ان کے نمبر پر فوری پیسے بھیج دیں، فون مت کریں بس پیسے بھیجیں"
+      ],
+      "example_bot_response_ur": "*فراڈ ہے!*\n*قسم:* جعلی اغوا کال فراڈ\n*خطرے کی نشانیاں:*\n• \"فوری رقم بھیجیں\" اور \"پولیس کو نہ بتانا\" — یہ خوف پھیلانے کا حربہ ہے۔\n• فیملی ممبر سے براہ راست بات نہ کروانا۔\n*ابھی کیا کریں:*\n1. کوئی رقم نہ بھیجیں۔\n2. فون بند کر کے براہ راست اپنے فیملی ممبر کو کال کریں۔\n3. پولیس ہیلپ لائن 15 پر تصدیق کریں۔\n_یہ پیغام گھر والوں کو بھی بھیجیں_",
+      "what_to_do_ur": "پیسے نہ بھیجیں۔ فون بند کر کے فوری اپنے گھر والے کو اس کے اپنے نمبر پر کال کریں۔ 15 پر پولیس سے تصدیق کریں۔",
+      "sources": [
+        "https://www.samaa.tv/2087343243-nccia-warns-public-against-whatsapp-fraud-fake-calls"
+      ]
+    },
+    {
+      "id": "fake_bisp",
+      "name_en": "Fake BISP / Ehsaas Scam",
+      "name_ur": "جعلی بے نظیر / احساس فراڈ",
+      "official_facts": [
+        "Official BISP SMS comes ONLY from short code 8171",
+        "BISP is 100% FREE — no fee, no 'verification charge', ever",
+        "BISP has no agents; no online eligibility portal — only SMS CNIC to 8171 or 8171.bisp.gov.pk",
+        "Official helpline 0800-26477",
+        "Known fake portals: cmp-punjab.com.pk, 8171ehsaasprogramme.com.pk and similar"
+      ],
+      "red_flags": [
+        "BISP/Ehsaas message from a normal mobile number instead of 8171",
+        "Any fee to 'release' payment ('200 rupay verification fee')",
+        "Links to non-.gov.pk sites",
+        "Asks for CNIC, OTP, or bank details on call/WhatsApp",
+        "Claims extra prize money or special package approved",
+        "Asks for fingerprints / 'angootha' outside official centers"
+      ],
+      "trigger_keywords": [
+        "BISP",
+        "Ehsaas",
+        "احساس",
+        "8171",
+        "Benazir",
+        "بے نظیر",
+        "kafalat",
+        "کفالت",
+        "imdad",
+        "امداد",
+        "wazifa",
+        "وظیفہ",
+        "qist",
+        "قسط",
+        "ration",
+        "راشن"
+      ],
+      "trigger_phrases": [
+        "verification fee bhejain",
+        "ویریفکیشن فیس",
+        "raqam manzoor hui hai",
+        "رقم منظور ہوئی ہے",
+        "qist rok di gai hai",
+        "قسط روک دی گئی ہے",
+        "CNIC aur OTP bhejain",
+        "شناختی کارڈ نمبر بھیجیں",
+        "payment release karne k liye",
+        "ادائیگی جاری کرنے کے لیے",
+        "agent se rabta karein",
+        "نمائندے سے رابطہ کریں"
+      ],
+      "sample_scam_messages": [
+        "Mubarak ho! Apko Benazir Income Support se 25000 manzoor hue hain. Raqam hasil karne k liye 200 rupay verification fee is number par bhejain: 0301-XXXXXXX",
+        "BISP Alert: Apki qist rok di gai hai. Bahal karne k liye apna CNIC aur OTP is number par bhejain.",
+        "احساس پروگرام: مبارک ہو آپ کے 50,000 روپے منظور ہو گئے ہیں۔ رقم وصول کرنے کے لیے اس نمبر پر اپنا شناختی کارڈ نمبر اور بینک تفصیل بھیجیں"
+      ],
+      "example_bot_response_ur": "*فراڈ ہے!*\n*قسم:* جعلی بے نظیر / احساس فراڈ\n*خطرے کی نشانیاں:*\n• \"200 روپے ویریفیکیشن فیس\" — بے نظیر پروگرام بالکل مفت ہے۔\n• سرکاری پیغام صرف 8171 سے آتا ہے، عام نمبر سے نہیں۔\n*ابھی کیا کریں:*\n1. کوئی فیس یا ذاتی معلومات نہ دیں۔\n2. تصدیق کے لیے اپنا CNIC نمبر 8171 پر ایس ایم ایس کریں۔\n3. ہیلپ لائن 0800-26477 پر رابطہ کریں۔\n_یہ پیغام گھر والوں کو بھی بھیجیں_",
+      "what_to_do_ur": "بے نظیر مکمل مفت ہے، صرف 8171 سے پیغام آتا ہے۔ فیس نہ دیں۔ تصدیق: شناختی کارڈ نمبر 8171 پر SMS کریں یا 0800-26477 پر کال کریں۔",
+      "sources": [
+        "https://pakobserver.net/fake-alert-these-8171-portals-are-not-from-bisp-or-ehsaas/",
+        "https://www.phoneworld.com.pk/exposing-spam-websites-how-8171-check-online-cnic-portals-are-misleading-bisp-ehsaas-beneficiaries/"
+      ]
+    },
+    {
+      "id": "jeeto_pakistan",
+      "name_en": "Jeeto Pakistan Lottery Scam",
+      "name_ur": "جیتو پاکستان لاٹری فراڈ",
+      "official_facts": [
+        "ARY/Jeeto Pakistan runs NO SMS/call lottery for non-participants",
+        "You cannot win a show you never attended or registered for",
+        "Real prizes never need a 'tax', 'processing fee' or Easypaisa/JazzCash deposit",
+        "ARY News itself reported this scam — it even fooled a sitting MNA with fake gold/car promises"
+      ],
+      "red_flags": [
+        "Won a prize (cash/gold/car/bike) in a draw you never entered",
+        "Uses Jeeto Pakistan / Fahad Mustafa / ARY name or logo",
+        "Demands tax/fee/registration charge to claim",
+        "Asks you to call back an unknown 03xx number",
+        "Deadline pressure: claim 'within 24 hours'",
+        "SIM lottery variant: 'apki SIM lucky draw me nikli hai'"
+      ],
+      "trigger_keywords": [
+        "Jeeto Pakistan",
+        "جیتو پاکستان",
+        "lucky draw",
+        "لکی ڈرا",
+        "inaam",
+        "انعام",
+        "prize",
+        "lottery",
+        "لاٹری",
+        "jeet gaye",
+        "جیت گئے",
+        "Fahad Mustafa",
+        "فہد مصطفیٰ",
+        "gold",
+        "سونا",
+        "tola",
+        "تولہ",
+        "winner",
+        "qura andazi",
+        "قرعہ اندازی",
+        "SIM lottery"
+      ],
+      "trigger_phrases": [
+        "apka number select hua hai",
+        "آپ کا نمبر منتخب ہوا ہے",
+        "tax bhej kar prize hasil karein",
+        "ٹیکس بھیج کر انعام حاصل کریں",
+        "5 tola gold jeeta hai",
+        "تولہ سونا جیتا ہے",
+        "SIM lucky draw me nikli",
+        "سم لکی ڈرا میں نکلی",
+        "prize expire ho jaye ga",
+        "انعام ضائع ہو جائے گا",
+        "head office se rabta karein",
+        "ہیڈ آفس سے رابطہ کریں"
+      ],
+      "sample_scam_messages": [
+        "Mubarak ho! Jeeto Pakistan lucky draw me apka number select hua hai. Apne 5 tola gold aur motorcycle jeeti hai. Prize claim karne k liye 5000 rupay tax is number par bhejain: 0345-XXXXXXX",
+        "Congratulations! You have won Rs 500,000 in ARY Jeeto Pakistan SIM lottery. Call 0301-XXXXXXX immediately to claim your prize before it expires.",
+        "جیتو پاکستان کی جانب سے مبارکباد! آپ کی سم قرعہ اندازی میں نکلی ہے، آپ نے 10 تولہ سونا جیتا ہے۔ انعام حاصل کرنے کے لیے ہیڈ آفس نمبر 0300-XXXXXXX پر فوری رابطہ کریں"
+      ],
+      "example_bot_response_ur": "*فراڈ ہے!*\n*قسم:* جیتو پاکستان لاٹری فراڈ\n*خطرے کی نشانیاں:*\n• \"ٹیکس بھیجیں\" — انعامات کے لیے پہلے کوئی فیس نہیں لی جاتی۔\n• جس شو میں شرکت نہیں کی اس کا انعام ملنا ناممکن ہے۔\n*ابھی کیا کریں:*\n1. کوئی رجسٹریشن یا ٹیکس فیس نہ بھیجیں۔\n2. نمبر بلاک کریں۔\n3. رپورٹ complaint.fia.gov.pk پر درج کریں۔\n_یہ پیغام گھر والوں کو بھی بھیجیں_",
+      "what_to_do_ur": "جس شو میں شریک نہیں ہوئے اس میں جیت ناممکن۔ انعام کے لیے ٹیکس مانگنا ہی فراڈ ہے۔ نمبر بلاک کر کے اطلاع دیں۔",
+      "sources": [
+        "https://arynews.tv/a-group-scams-people-using-jeeto-pakistan/"
+      ]
+    }
+  ],
+  "generic_red_flags_for_emerging": {
+    "description": "Used when no category matches but scam structure is present (rule 4)",
+    "flags_ur": [
+      "نامعلوم نمبر سے فوری کارروائی کا مطالبہ",
+      "پیسے، OTP، شناختی کارڈ یا بینک تفصیل کا مطالبہ",
+      "ڈر یا لالچ: اکاؤنٹ بند، سم بند، انعام، گرفتاری",
+      "غیر سرکاری لنک (.gov.pk نہیں)"
+    ],
+    "emerging_note_ur": "یہ ایک نیا فراڈ پیٹرن ہو سکتا ہے — ہم نے اسے ریکارڈ کر لیا ہے تاکہ دوسروں کو بچایا جا سکے۔"
+  }
+}
