@@ -3,7 +3,7 @@
 <!-- LOGO -->
 <img src="./assets/sachbatao.png" alt="sayNoToFraud logo" width="120" />
 
-<h1>sayNoToFraud</h1>
+<h1>Sach Batao</h1>
 
 <p>
   <strong>A lightweight, production-ready WhatsApp bot in Node.js for Urdu fraud detection.</strong><br/>
@@ -23,7 +23,7 @@
 
 ## What is this?
 
-**sayNoToFraud** is a WhatsApp security assistant designed to protect citizens from common Pakistani scams (fake e-challans, courier OTP hijacking, emergency/kidnapping scams, lottery fraud, and BISP/Ehsaas program scams).
+**SachBatao** is a WhatsApp security assistant designed to protect citizens from common Pakistani scams (fake e-challans, courier OTP hijacking, emergency/kidnapping scams, lottery fraud, and BISP/Ehsaas program scams).
 
 It automatically intercepts incoming text messages and voice notes, transcribes the voice notes, uses OpenRouter LLM APIs to detect suspicious patterns, and replies back with a localized Urdu script response. Voice note responses are generated using high-quality Google TTS.
 
@@ -140,7 +140,7 @@ docker logs -f whatsapp-fraud-detector
 ## Project Structure
 
 ```
-sayNoToFraud/
+sachbatao/
 ├── assets/
 │   └── logo.png             # Project logo
 ├── src/
