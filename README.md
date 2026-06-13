@@ -1,7 +1,7 @@
 <div align="center">
 
 <!-- LOGO -->
-<img src="./assets/logo.png" alt="sayNoToFraud logo" width="120" />
+<img src="./assets/sachbatao.png" alt="sayNoToFraud logo" width="120" />
 
 <h1>sayNoToFraud</h1>
 
