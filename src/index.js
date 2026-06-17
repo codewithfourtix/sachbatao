@@ -63,7 +63,7 @@ class FraudDetectionSystem {
         logger.info('Text message received', { from: message.from, preview: userText?.slice(0, 80) });
       }
 
-      const fraudResult = await this.fraudDetector.analyze(userText);
+      const fraudResult = await this.fraudDetector.analyze(userText, { source: message.type });
       logger.info('Fraud analysis complete', {
         from: message.from,
         is_fraud: fraudResult.is_fraud,
