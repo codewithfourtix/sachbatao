@@ -73,7 +73,24 @@ The system is optimized for minimal runtime cost:
 | --- | --- | --- |
 | **LLM Analysis** | `google/gemini-2.0-flash-lite-001` | ~$0.0001 / check |
 | **Voice Transcription** | `openai/whisper-1` | ~$0.003 / 30s voice note |
-| **Voice Synthesis** | `Google TTS (Native Urdu)` | **Free** |
+| **Voice Synthesis** | `Google Cloud TTS (ur-IN)` → free Google TTS fallback | **~$0–0.001 / reply** |
+
+---
+
+## Voice Synthesis (TTS)
+
+Voice replies use a two-tier strategy so they sound good **and** never break:
+
+1. **Primary — Google Cloud Text-to-Speech** (official, production-grade): natural `ur-IN` Urdu neural voices with no IP rate limits. Enabled by setting `GOOGLE_TTS_API_KEY` in `.env`. Google Cloud's free tier covers ~1M characters/month, so typical usage stays free.
+2. **Fallback — free Google Translate TTS**: the original unofficial endpoint. Used automatically when no API key is set, **or** if a Cloud TTS request ever fails. This guarantees voice replies keep working even without a paid key.
+
+To enable the production path: enable the **Cloud Text-to-Speech API** in the Google Cloud Console, create an API key, and set:
+
+```env
+GOOGLE_TTS_API_KEY=your_google_cloud_api_key
+GOOGLE_TTS_LANGUAGE_CODE=ur-IN
+GOOGLE_TTS_VOICE=ur-IN-Wavenet-A
+```
 
 ---
 
@@ -87,8 +104,8 @@ The system is optimized for minimal runtime cost:
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/codewithfourtix/sayNoToFraud.git
-cd sayNoToFraud
+git clone https://github.com/codewithfourtix/sachbatao.git
+cd sachbatao
 ```
 
 ### 2. Configure Environment
@@ -152,11 +169,9 @@ sachbatao/
 │   ├── audio-processor.js   # Ffmpeg format conversions
 │   ├── config.js            # Configuration settings & fallback templates
 │   ├── logger.js            # Audit and logs recorder
-│   └── urdu-to-hindi.js     # Text normalization helpers
+│   └── speech-text.js       # Speech text cleanup helper (strips markdown for TTS)
 ├── scam_patterns.json       # Scam category database (patterns & keywords)
 ├── system_prompt.txt        # LLM system behavior instructions & JSON schema
-├── test_messages.json       # Verification test suite datasets
-├── test-runner.js           # Local test runner script
 ├── Dockerfile               # Docker specification
 ├── docker-compose.yml       # Docker orchestration config
 └── package.json             # Node dependencies and scripts

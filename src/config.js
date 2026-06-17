@@ -14,9 +14,12 @@ const config = {
   sttModel: process.env.OPENROUTER_STT_MODEL || 'openai/whisper-1',
 
 
-  ttsModel: process.env.OPENROUTER_TTS_MODEL || 'hexgrad/kokoro-82m',
-  ttsVoice: process.env.OPENROUTER_TTS_VOICE || 'hf_alpha',
-  ttsFormat: process.env.OPENROUTER_TTS_FORMAT || 'mp3',
+  // Voice synthesis. When googleTtsApiKey is set, the official Google Cloud TTS
+  // is used (production-grade, no rate limits); otherwise the free Google
+  // Translate TTS fallback handles voice replies.
+  googleTtsApiKey: process.env.GOOGLE_TTS_API_KEY || '',
+  googleTtsLanguageCode: process.env.GOOGLE_TTS_LANGUAGE_CODE || 'ur-IN',
+  googleTtsVoice: process.env.GOOGLE_TTS_VOICE || 'ur-IN-Wavenet-A',
 
   sessionStorage: process.env.SESSION_STORAGE || './temp/sessions',
   fraudAlertWebhook: process.env.FRAUD_ALERT_WEBHOOK || '',
