@@ -66,7 +66,52 @@ class OpenRouterClient {
     return content;
   }
 
-  
+
+  // OCR: extract the raw visible text from an image using a vision model.
+  async extractTextFromImage(base64Data, mimetype = 'image/jpeg') {
+    const dataUrl = `data:${mimetype};base64,${base64Data}`;
+
+    let response;
+    try {
+      response = await axios.post(
+        `${BASE_URL}/chat/completions`,
+        {
+          model: config.visionModel,
+          messages: [
+            {
+              role: 'user',
+              content: [
+                {
+                  type: 'text',
+                  text:
+                    'Extract ALL text visible in this image exactly as written. ' +
+                    'Output only the raw text — no commentary, no translation, no labels. ' +
+                    'If the image contains no readable text, output nothing.',
+                },
+                { type: 'image_url', image_url: { url: dataUrl } },
+              ],
+            },
+          ],
+          temperature: 0,
+        },
+        { headers: this.headers, timeout: 60000 }
+      );
+    } catch (err) {
+      throw new Error(`OpenRouter vision OCR failed (${formatAxiosError(err)})`);
+    }
+
+    const text = String(response.data?.choices?.[0]?.message?.content || '').trim();
+
+    logger.debug('OpenRouter OCR complete', {
+      model: config.visionModel,
+      chars: text.length,
+      usage: response.data?.usage,
+    });
+
+    return text;
+  }
+
+
   async transcribe(audioFilePath, language = 'ur') {
     const format = this.getAudioFormat(audioFilePath);
     const buffer = await fs.promises.readFile(audioFilePath);

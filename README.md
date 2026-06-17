@@ -25,7 +25,16 @@
 
 **SachBatao** is a WhatsApp security assistant designed to protect citizens from common Pakistani scams (fake e-challans, courier OTP hijacking, emergency/kidnapping scams, lottery fraud, and BISP/Ehsaas program scams).
 
-It automatically intercepts incoming text messages and voice notes, transcribes the voice notes, uses OpenRouter LLM APIs to detect suspicious patterns, and replies back with a localized Urdu script response. Voice note responses are generated using high-quality Google TTS.
+It automatically intercepts incoming **text messages, voice notes, images, and PDF documents**, extracts the text from each (transcribing voice, OCR-ing images, reading PDFs), uses OpenRouter LLM APIs to detect suspicious patterns, and replies back with a localized Urdu script response. Voice note responses are generated using high-quality Google TTS.
+
+### Supported message types
+
+| Input | How it's handled |
+| --- | --- |
+| **Text** | Analyzed directly. |
+| **Voice note** | Transcribed (Whisper STT) → analyzed → reply sent as an Urdu voice note. |
+| **Image** | Text is OCR-extracted via a vision model → analyzed. (If no text is found, the bot asks for a clearer image.) |
+| **PDF** | Text from **only the first 3 pages** is read → analyzed. When the PDF is longer, the reply ends with a note that only the first 3 pages were checked. Non-PDF documents are politely declined. |
 
 ---
 
@@ -166,6 +175,8 @@ sachbatao/
 │   ├── fraud-detector.js    # LLM wrapper & analysis logic
 │   ├── tts-service.js       # Google TTS wrapper for Urdu voice notes
 │   ├── stt-service.js       # OpenRouter Whisper STT integration
+│   ├── ocr-service.js       # Image OCR via vision model (extract text)
+│   ├── pdf-service.js       # PDF text extraction (first 3 pages only)
 │   ├── audio-processor.js   # Ffmpeg format conversions
 │   ├── config.js            # Configuration settings & fallback templates
 │   ├── logger.js            # Audit and logs recorder

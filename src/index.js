@@ -6,12 +6,20 @@ const FraudDetector = require('./fraud-detector');
 const AudioProcessor = require('./audio-processor');
 const STTService = require('./stt-service');
 const TTSService = require('./tts-service');
+const OCRService = require('./ocr-service');
+const { PDFService, MAX_PAGES } = require('./pdf-service');
+
+// Appended to the reply when a PDF had more pages than we scanned.
+const PDF_TRUNCATION_NOTE =
+  `\n\n_نوٹ: ہم نے اس فائل کے صرف پہلے ${MAX_PAGES} صفحات چیک کیے ہیں۔ یہ نتیجہ اسی بنیاد پر ہے۔_`;
 
 class FraudDetectionSystem {
   constructor() {
     this.fraudDetector = new FraudDetector();
     this.stt = new STTService();
     this.tts = new TTSService();
+    this.ocr = new OCRService();
+    this.pdf = new PDFService();
     this.audioProcessor = new AudioProcessor();
     this.whatsapp = new WhatsAppClient(this.handleMessage.bind(this));
     this.processing = new Set();
@@ -33,9 +41,23 @@ class FraudDetectionSystem {
       logger.audit('message_received', { from: message.from, type: message.type });
 
       let userText;
+      let responseSuffix = '';
 
       if (message.type === 'voice') {
         userText = await this.processVoiceMessage(message, tempFiles);
+      } else if (message.type === 'image') {
+        userText = await this.processImageMessage(message);
+      } else if (message.type === 'document') {
+        const result = await this.processDocumentMessage(message);
+
+        // Non-PDF (or unreadable) document: reply directly, skip fraud analysis.
+        if (result.reply) {
+          await this.whatsapp.sendTextMessage(message.from, result.reply);
+          return;
+        }
+
+        userText = result.text;
+        responseSuffix = result.suffix || '';
       } else {
         userText = message.body;
         logger.info('Text message received', { from: message.from, preview: userText?.slice(0, 80) });
@@ -49,10 +71,12 @@ class FraudDetectionSystem {
         warning_level: fraudResult.warning_level,
       });
 
+      const responseText = fraudResult.response_text + responseSuffix;
+
       if (message.type === 'voice') {
-        await this.sendVoiceResponse(message.from, fraudResult.response_text);
+        await this.sendVoiceResponse(message.from, responseText);
       } else {
-        await this.whatsapp.sendTextMessage(message.from, fraudResult.response_text);
+        await this.whatsapp.sendTextMessage(message.from, responseText);
       }
 
       if (fraudResult.warning_level === 'high' && process.env.FRAUD_ALERT_WEBHOOK) {
@@ -61,9 +85,14 @@ class FraudDetectionSystem {
     } catch (err) {
       logger.error('Failed to process message', { from: message.from, error: err.message });
 
-      const errorReply = message.type === 'voice'
-        ? 'معذرت، آپ کے وائس نوٹ کو پروسیس نہیں کیا جا سکا۔ براہ کرم دوبارہ بھیجیں یا ٹیکسٹ میں لکھیں۔'
-        : 'معذرت، آپ کے پیغام کو پروسیس نہیں کیا جا سکا۔ براہ کرم دوبارہ کوشش کریں۔';
+      let errorReply;
+      if (err.message === 'NO_TEXT_IN_IMAGE') {
+        errorReply = 'تصویر میں کوئی متن نہیں ملا۔ براہ کرم صاف تصویر بھیجیں یا پیغام لکھ کر بھیجیں۔';
+      } else if (message.type === 'voice') {
+        errorReply = 'معذرت، آپ کے وائس نوٹ کو پروسیس نہیں کیا جا سکا۔ براہ کرم دوبارہ بھیجیں یا ٹیکسٹ میں لکھیں۔';
+      } else {
+        errorReply = 'معذرت، آپ کے پیغام کو پروسیس نہیں کیا جا سکا۔ براہ کرم دوبارہ کوشش کریں۔';
+      }
 
       try {
         if (message.type === 'voice') {
@@ -97,6 +126,53 @@ class FraudDetectionSystem {
     const userText = await this.stt.transcribeUrdu(mp3Path);
     logger.info('Voice transcribed', { from: message.from, preview: userText.slice(0, 80) });
     return userText;
+  }
+
+  async processImageMessage(message) {
+    const media = await message.data.downloadMedia();
+    if (!media) {
+      throw new Error('Failed to download image media');
+    }
+
+    const userText = await this.ocr.extractFromImage(media);
+    logger.info('Image text extracted', { from: message.from, preview: userText.slice(0, 80) });
+
+    if (!userText.trim()) {
+      // Surface a clear message instead of running fraud analysis on empty text.
+      throw new Error('NO_TEXT_IN_IMAGE');
+    }
+
+    return userText;
+  }
+
+  async processDocumentMessage(message) {
+    const media = await message.data.downloadMedia();
+    if (!media) {
+      throw new Error('Failed to download document media');
+    }
+
+    const isPdf = (media.mimetype || '').toLowerCase().includes('pdf');
+    if (!isPdf) {
+      logger.info('Unsupported document type received', { from: message.from, mimetype: media.mimetype });
+      return {
+        reply: 'معذرت، فی الحال صرف PDF فائلیں چیک کی جا سکتی ہیں۔ آپ متن، تصویر یا وائس نوٹ بھی بھیج سکتے ہیں۔',
+      };
+    }
+
+    const buffer = Buffer.from(media.data, 'base64');
+    const { text, totalPages, truncated } = await this.pdf.extractFirstPages(buffer);
+    logger.info('PDF text extracted', { from: message.from, totalPages, preview: text.slice(0, 80) });
+
+    if (!text.trim()) {
+      return {
+        reply: 'معذرت، اس PDF میں کوئی متن نہیں ملا۔ ممکن ہے یہ صرف تصاویر پر مشتمل ہو۔ آپ اسکرین شاٹ بھیج کر دیکھ سکتے ہیں۔',
+      };
+    }
+
+    return {
+      text,
+      suffix: truncated ? PDF_TRUNCATION_NOTE : '',
+    };
   }
 
   async sendVoiceResponse(to, text) {
