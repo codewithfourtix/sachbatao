@@ -63,7 +63,7 @@ class FraudDetector {
   }
 
   
-  async analyze(userMessage) {
+  async analyze(userMessage, options = {}) {
     if (!userMessage || !userMessage.trim()) {
       return {
         ...DEFAULT_RESULT,
@@ -71,15 +71,23 @@ class FraudDetector {
       };
     }
 
-    const directResponse = this.getDirectResponse(userMessage);
-    if (directResponse) {
-      return directResponse;
+    // Text pulled out of an image or PDF is content the user explicitly sent to
+    // be checked. The greeting/challan shortcuts only make sense for something a
+    // user typed, so we skip them here — otherwise non-scam images fall through
+    // to the "introduce yourself" greeting instead of getting a real verdict.
+    const isExtracted = options.source === 'image' || options.source === 'document';
+
+    if (!isExtracted) {
+      const directResponse = this.getDirectResponse(userMessage);
+      if (directResponse) {
+        return directResponse;
+      }
     }
 
     try {
       const raw = await this.client.chatCompletion([
         { role: 'system', content: this.systemPrompt },
-        { role: 'user', content: userMessage },
+        { role: 'user', content: this.buildUserContent(userMessage, options.source) },
       ]);
 
       const result = this.normalizeResult(raw);
@@ -98,6 +106,31 @@ class FraudDetector {
         response_text: 'معذرت، تجزیہ میں خرابی آئی۔ براہ کرم کچھ دیر بعد دوبارہ کوشش کریں۔',
       };
     }
+  }
+
+  // Wrap extracted (OCR / PDF) text with a provenance note so the model knows
+  // it is content submitted for checking, not a chat message — and must always
+  // return a verdict rather than greeting the user.
+  buildUserContent(userMessage, source) {
+    if (source === 'image') {
+      return (
+        '[یہ متن ایک تصویر سے OCR کے ذریعے نکالا گیا ہے جو صارف نے فراڈ چیک کے لیے بھیجی۔ ' +
+        'اسے تجزیہ کے لیے مواد سمجھیں، سلام یا سوال نہیں۔ ہمیشہ verdict دیں۔ ' +
+        'اگر اس میں فراڈ کی کوئی نشانی نہ ہو تو "ٹھیک لگتا ہے" verdict دیں اور بتائیں کہ یہ فراڈ نہیں لگتا۔]\n\n' +
+        userMessage
+      );
+    }
+
+    if (source === 'document') {
+      return (
+        '[یہ متن ایک PDF فائل سے نکالا گیا ہے جو صارف نے فراڈ چیک کے لیے بھیجی۔ ' +
+        'اسے تجزیہ کے لیے مواد سمجھیں، سلام یا سوال نہیں۔ ہمیشہ verdict دیں۔ ' +
+        'اگر اس میں فراڈ کی کوئی نشانی نہ ہو تو "ٹھیک لگتا ہے" verdict دیں اور بتائیں کہ یہ فراڈ نہیں لگتا۔]\n\n' +
+        userMessage
+      );
+    }
+
+    return userMessage;
   }
 
   getDirectResponse(userMessage) {
