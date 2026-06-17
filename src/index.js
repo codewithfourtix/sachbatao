@@ -8,6 +8,12 @@ const STTService = require('./stt-service');
 const TTSService = require('./tts-service');
 const OCRService = require('./ocr-service');
 const { PDFService, MAX_PAGES } = require('./pdf-service');
+const RateLimiter = require('./rate-limiter');
+
+// Per-sender cap. Each message triggers a paid OpenRouter call, so this guards
+// against spam loops running up the bill. Tune via env if needed.
+const RATE_LIMIT_MAX = Number(process.env.RATE_LIMIT_MAX) || 5;
+const RATE_LIMIT_WINDOW_MS = (Number(process.env.RATE_LIMIT_WINDOW_SEC) || 60) * 1000;
 
 // Appended to the reply when a PDF had more pages than we scanned.
 const PDF_TRUNCATION_NOTE =
@@ -23,6 +29,15 @@ class FraudDetectionSystem {
     this.audioProcessor = new AudioProcessor();
     this.whatsapp = new WhatsAppClient(this.handleMessage.bind(this));
     this.processing = new Set();
+    this.rateLimiter = new RateLimiter({
+      maxRequests: RATE_LIMIT_MAX,
+      windowMs: RATE_LIMIT_WINDOW_MS,
+    });
+
+    // Periodically drop stale rate-limit entries. unref() so it never keeps the
+    // process alive on its own.
+    this.pruneTimer = setInterval(() => this.rateLimiter.prune(), RATE_LIMIT_WINDOW_MS);
+    this.pruneTimer.unref();
   }
 
   async handleMessage(message) {
@@ -30,6 +45,26 @@ class FraudDetectionSystem {
 
     if (this.processing.has(messageKey)) {
       logger.warn('Skipping duplicate message', { from: message.from });
+      return;
+    }
+
+    // Per-sender rate limit. Checked before any media download or OpenRouter
+    // call so a spam loop costs us nothing. A blocked sender is told to wait
+    // once per window; further messages in that window are dropped silently.
+    if (!this.rateLimiter.check(message.from)) {
+      const waitSec = this.rateLimiter.retryAfter(message.from);
+      logger.audit('rate_limited', { from: message.from, retry_after_sec: waitSec });
+
+      if (this.rateLimiter.shouldNotify(message.from)) {
+        try {
+          await this.whatsapp.sendTextMessage(
+            message.from,
+            `براہ کرم تھوڑا انتظار کریں۔ آپ نے بہت تیزی سے کئی پیغامات بھیجے ہیں۔ ${waitSec} سیکنڈ بعد دوبارہ کوشش کریں۔`
+          );
+        } catch (err) {
+          logger.error('Failed to send rate-limit reply', { error: err.message });
+        }
+      }
       return;
     }
 
