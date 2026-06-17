@@ -11,6 +11,36 @@ const logger = require('./logger');
 
 ffmpeg.setFfmpegPath(ffmpegPath);
 
+// Chromium leaves Singleton* lock files in its profile directory. When that
+// profile lives on a persistent volume and the previous container exited
+// uncleanly (e.g. a redeploy), the stale lock makes the next launch fail with
+// "profile appears to be in use by another Chromium process" (exit code 21),
+// crash-looping the bot. No Chromium is running yet at startup, so these locks
+// are always safe to remove. (Before the volume, the profile was wiped each
+// restart, which is why this only started after persistence was added.)
+function clearChromiumLocks(dir) {
+  let entries;
+  try {
+    entries = fs.readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return; // directory doesn't exist yet — nothing to clean
+  }
+
+  for (const entry of entries) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      clearChromiumLocks(full);
+    } else if (/^Singleton(Lock|Cookie|Socket)$/.test(entry.name)) {
+      try {
+        fs.unlinkSync(full);
+        logger.warn('Removed stale Chromium lock', { file: full });
+      } catch (err) {
+        logger.warn('Failed to remove Chromium lock', { file: full, error: err.message });
+      }
+    }
+  }
+}
+
 class WhatsAppClient {
   
   constructor(messageHandler) {
@@ -92,6 +122,10 @@ class WhatsAppClient {
 
   async initialize() {
     logger.info('Initializing WhatsApp client', { sessionStorage: config.sessionStorage });
+
+    // Remove any stale Chromium locks left on the persistent session volume by a
+    // previous container, otherwise the browser refuses to launch (exit code 21).
+    clearChromiumLocks(config.sessionStorage);
 
     const port = process.env.PORT || 3000;
 
