@@ -179,6 +179,31 @@ async function runAsyncTests() {
     });
   }
 
+  // ------------------------------------------------ feedback persistence (#12)
+  {
+    const fs = require('fs');
+    const os = require('os');
+    const path = require('path');
+    const tmp = path.join(os.tmpdir(), `fb-${process.pid}.jsonl`);
+    process.env.FEEDBACK_LOG_PATH = tmp;
+    delete process.env.FEEDBACK_WEBHOOK; // keep the test offline — no POST
+    const { recordFeedback } = require('../src/feedback-store');
+
+    await recordFeedback({ from: 'u_abc', value: 'no', fraud_type: 'fake_bisp' });
+    await recordFeedback({ from: 'u_abc', value: 'yes', fraud_type: null });
+
+    console.log('\nfeedback persistence (#12)');
+    test('recordFeedback appends parseable JSON lines with a timestamp', () => {
+      const lines = fs.readFileSync(tmp, 'utf8').trim().split('\n');
+      assert.strictEqual(lines.length, 2, 'expected 2 records');
+      const first = JSON.parse(lines[0]);
+      assert.strictEqual(first.value, 'no');
+      assert.strictEqual(first.fraud_type, 'fake_bisp');
+      assert(first.timestamp, 'missing timestamp');
+    });
+    fs.rmSync(tmp, { force: true });
+  }
+
   console.log(`\n${passed} passed, ${failed} failed`);
   process.exit(failed ? 1 : 0);
 }
