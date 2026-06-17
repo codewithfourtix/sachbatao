@@ -1,6 +1,9 @@
 const axios = require('axios');
 const { stripSpeechFormatting } = require('./speech-text');
+const { config } = require('./config');
 const logger = require('./logger');
+
+const CLOUD_TTS_URL = 'https://texttospeech.googleapis.com/v1/text:synthesize';
 
 class TTSService {
   async speak(text) {
@@ -10,6 +13,46 @@ class TTSService {
 
     const cleanText = stripSpeechFormatting(text);
 
+    // Primary: official Google Cloud TTS (production-grade, no IP rate limits).
+    // Used only when an API key is configured; any failure falls through to the
+    // free Google Translate TTS so voice replies never break.
+    if (config.googleTtsApiKey) {
+      try {
+        const buffer = await this.speakViaCloud(cleanText);
+        logger.info('Google Cloud TTS synthesis complete', { bytes: buffer.length });
+        return buffer;
+      } catch (err) {
+        logger.warn('Google Cloud TTS failed, falling back to free Google TTS', { error: err.message });
+      }
+    }
+
+    // Fallback: free, unofficial Google Translate TTS endpoint.
+    return this.speakViaTranslate(cleanText);
+  }
+
+  async speakViaCloud(cleanText) {
+    const response = await axios.post(
+      `${CLOUD_TTS_URL}?key=${config.googleTtsApiKey}`,
+      {
+        input: { text: cleanText },
+        voice: {
+          languageCode: config.googleTtsLanguageCode,
+          name: config.googleTtsVoice,
+        },
+        audioConfig: { audioEncoding: 'MP3' },
+      },
+      { timeout: 30000 }
+    );
+
+    const audioContent = response.data?.audioContent;
+    if (!audioContent) {
+      throw new Error('Google Cloud TTS returned empty audio');
+    }
+
+    return Buffer.from(audioContent, 'base64');
+  }
+
+  async speakViaTranslate(cleanText) {
     try {
       const chunks = this.splitText(cleanText, 150);
       const buffers = [];
@@ -26,10 +69,10 @@ class TTSService {
         buffers.push(Buffer.from(response.data));
       }
 
-      logger.info('Google TTS synthesis complete', { chunks: chunks.length });
+      logger.info('Google TTS (free) synthesis complete', { chunks: chunks.length });
       return Buffer.concat(buffers);
     } catch (err) {
-      logger.error('Google TTS synthesis failed', { error: err.message });
+      logger.error('Google TTS (free) synthesis failed', { error: err.message });
       throw new Error(`Google TTS failed: ${err.message}`);
     }
   }
