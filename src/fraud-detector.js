@@ -1,5 +1,6 @@
 const OpenRouterClient = require('./openrouter-client');
 const { FRAUD_SYSTEM_PROMPT, FRAUD_RESPONSE_TEMPLATES, SCAM_PATTERNS } = require('./config');
+const { applyOutputGuardrails } = require('./sanitize');
 const logger = require('./logger');
 
 const DEFAULT_RESULT = {
@@ -90,7 +91,7 @@ class FraudDetector {
         { role: 'user', content: this.buildUserContent(userMessage, options.source) },
       ]);
 
-      const result = this.normalizeResult(raw);
+      const result = applyOutputGuardrails(this.normalizeResult(raw));
       logger.audit('fraud_analysis', {
         is_fraud: result.is_fraud,
         fraud_type: result.fraud_type,
@@ -108,29 +109,26 @@ class FraudDetector {
     }
   }
 
-  // Wrap extracted (OCR / PDF) text with a provenance note so the model knows
-  // it is content submitted for checking, not a chat message — and must always
-  // return a verdict rather than greeting the user.
+  // Build the user turn. The content to analyze is UNTRUSTED (the scammer wrote
+  // it), so it is wrapped in <message_to_analyze> tags the system prompt tells
+  // the model never to obey instructions from (guardrail #2). Any attempt by the
+  // content to close the tag early is neutralized first. A provenance note for
+  // OCR/PDF text is kept OUTSIDE the tags so it isn't mistaken for user content.
   buildUserContent(userMessage, source) {
+    const safe = String(userMessage).replace(/<\/?message_to_analyze>/gi, '[tag]');
+
+    let note = '';
     if (source === 'image') {
-      return (
-        '[یہ متن ایک تصویر سے OCR کے ذریعے نکالا گیا ہے جو صارف نے فراڈ چیک کے لیے بھیجی۔ ' +
-        'اسے تجزیہ کے لیے مواد سمجھیں، سلام یا سوال نہیں۔ ہمیشہ verdict دیں۔ ' +
-        'اگر اس میں فراڈ کی کوئی نشانی نہ ہو تو "ٹھیک لگتا ہے" verdict دیں اور بتائیں کہ یہ فراڈ نہیں لگتا۔]\n\n' +
-        userMessage
-      );
+      note =
+        '(نوٹ: یہ متن ایک تصویر سے OCR کے ذریعے نکالا گیا ہے جو صارف نے فراڈ چیک کے لیے بھیجی — ' +
+        'یہ سلام یا سوال نہیں، ہمیشہ verdict دیں۔)\n';
+    } else if (source === 'document') {
+      note =
+        '(نوٹ: یہ متن ایک PDF فائل سے نکالا گیا ہے جو صارف نے فراڈ چیک کے لیے بھیجی — ' +
+        'یہ سلام یا سوال نہیں، ہمیشہ verdict دیں۔)\n';
     }
 
-    if (source === 'document') {
-      return (
-        '[یہ متن ایک PDF فائل سے نکالا گیا ہے جو صارف نے فراڈ چیک کے لیے بھیجی۔ ' +
-        'اسے تجزیہ کے لیے مواد سمجھیں، سلام یا سوال نہیں۔ ہمیشہ verdict دیں۔ ' +
-        'اگر اس میں فراڈ کی کوئی نشانی نہ ہو تو "ٹھیک لگتا ہے" verdict دیں اور بتائیں کہ یہ فراڈ نہیں لگتا۔]\n\n' +
-        userMessage
-      );
-    }
-
-    return userMessage;
+    return `${note}<message_to_analyze>\n${safe}\n</message_to_analyze>`;
   }
 
   getDirectResponse(userMessage) {
@@ -196,6 +194,9 @@ class FraudDetector {
       response_text: parsed.response_text || FRAUD_RESPONSE_TEMPLATES[warningLevel] || FRAUD_RESPONSE_TEMPLATES.low,
       warning_level: warningLevel,
       user_action_required: parsed.user_action_required || 'none',
+      // marks a real LLM verdict (vs. greeting/challan/empty shortcuts) so the
+      // orchestrator knows when to attach the feedback prompt.
+      is_verdict: true,
     };
   }
 }

@@ -9,6 +9,10 @@ const TTSService = require('./tts-service');
 const OCRService = require('./ocr-service');
 const { PDFService, MAX_PAGES } = require('./pdf-service');
 const RateLimiter = require('./rate-limiter');
+const { DisclosureTracker, DISCLOSURE_TEXT } = require('./disclosure');
+const { FeedbackTracker, FEEDBACK_PROMPT, FEEDBACK_THANKS } = require('./feedback');
+const { AbuseMonitor } = require('./abuse-monitor');
+const { redactPII, hashSender, safePreview } = require('./redact');
 
 // Per-sender cap. Each message triggers a paid OpenRouter call, so this guards
 // against spam loops running up the bill. Tune via env if needed.
@@ -33,19 +37,47 @@ class FraudDetectionSystem {
       maxRequests: RATE_LIMIT_MAX,
       windowMs: RATE_LIMIT_WINDOW_MS,
     });
+    this.disclosure = new DisclosureTracker();
+    this.feedback = new FeedbackTracker();
+    this.abuse = new AbuseMonitor();
 
-    // Periodically drop stale rate-limit entries. unref() so it never keeps the
+    // Periodically drop stale in-memory entries. unref() so it never keeps the
     // process alive on its own.
-    this.pruneTimer = setInterval(() => this.rateLimiter.prune(), RATE_LIMIT_WINDOW_MS);
+    this.pruneTimer = setInterval(() => {
+      this.rateLimiter.prune();
+      this.feedback.prune();
+      this.abuse.prune();
+    }, RATE_LIMIT_WINDOW_MS);
     this.pruneTimer.unref();
   }
 
   async handleMessage(message) {
     const messageKey = `${message.from}-${message.data?.id?._serialized || Date.now()}`;
+    const who = hashSender(message.from);
 
     if (this.processing.has(messageKey)) {
-      logger.warn('Skipping duplicate message', { from: message.from });
+      logger.warn('Skipping duplicate message', { from: who });
       return;
+    }
+
+    // Feedback capture (guardrail #12). Cheap, no API call. Only fires when this
+    // sender has feedback pending and the message is exactly a yes/no token.
+    if (message.body) {
+      const verdictFeedback = this.feedback.classify(message.from, message.body);
+      if (verdictFeedback) {
+        const pending = this.feedback.consume(message.from);
+        logger.audit('feedback', {
+          from: who,
+          value: verdictFeedback,
+          fraud_type: pending?.meta?.fraud_type || null,
+        });
+        try {
+          await this.whatsapp.sendTextMessage(message.from, FEEDBACK_THANKS);
+        } catch (err) {
+          logger.error('Failed to send feedback ack', { from: who, error: err.message });
+        }
+        return;
+      }
     }
 
     // Per-sender rate limit. Checked before any media download or OpenRouter
@@ -53,7 +85,7 @@ class FraudDetectionSystem {
     // once per window; further messages in that window are dropped silently.
     if (!this.rateLimiter.check(message.from)) {
       const waitSec = this.rateLimiter.retryAfter(message.from);
-      logger.audit('rate_limited', { from: message.from, retry_after_sec: waitSec });
+      logger.audit('rate_limited', { from: who, retry_after_sec: waitSec });
 
       if (this.rateLimiter.shouldNotify(message.from)) {
         try {
@@ -62,7 +94,7 @@ class FraudDetectionSystem {
             `براہ کرم تھوڑا انتظار کریں۔ آپ نے بہت تیزی سے کئی پیغامات بھیجے ہیں۔ ${waitSec} سیکنڈ بعد دوبارہ کوشش کریں۔`
           );
         } catch (err) {
-          logger.error('Failed to send rate-limit reply', { error: err.message });
+          logger.error('Failed to send rate-limit reply', { from: who, error: err.message });
         }
       }
       return;
@@ -73,7 +105,18 @@ class FraudDetectionSystem {
     let tempFiles = [];
 
     try {
-      logger.audit('message_received', { from: message.from, type: message.type });
+      logger.audit('message_received', { from: who, type: message.type });
+
+      // First-contact disclosure (guardrail #6): tell the user this is an AI,
+      // not a government service, advisory only, and how their data is used.
+      if (this.disclosure.needsDisclosure(message.from)) {
+        this.disclosure.markSeen(message.from);
+        try {
+          await this.whatsapp.sendTextMessage(message.from, DISCLOSURE_TEXT);
+        } catch (err) {
+          logger.error('Failed to send disclosure', { from: who, error: err.message });
+        }
+      }
 
       let userText;
       let responseSuffix = '';
@@ -95,18 +138,31 @@ class FraudDetectionSystem {
         responseSuffix = result.suffix || '';
       } else {
         userText = message.body;
-        logger.info('Text message received', { from: message.from, preview: userText?.slice(0, 80) });
+        logger.info('Text message received', { from: who, preview: safePreview(userText) });
       }
 
       const fraudResult = await this.fraudDetector.analyze(userText, { source: message.type });
       logger.info('Fraud analysis complete', {
-        from: message.from,
+        from: who,
         is_fraud: fraudResult.is_fraud,
         confidence: fraudResult.confidence,
         warning_level: fraudResult.warning_level,
       });
 
-      const responseText = fraudResult.response_text + responseSuffix;
+      // Dual-use abuse signal (guardrail #7): one sender repeatedly submitting the
+      // same fraud-flagged content (ignoring digits) looks like evasion testing.
+      if (fraudResult.is_fraud && this.abuse.record(message.from, userText)) {
+        logger.audit('abuse_probe_suspected', { from: who, fraud_type: fraudResult.fraud_type });
+      }
+
+      let responseText = fraudResult.response_text + responseSuffix;
+
+      // Attach the feedback prompt only on real verdicts sent over text (not on
+      // greetings, challan help, or voice replies).
+      const attachFeedback = Boolean(fraudResult.is_verdict) && message.type !== 'voice';
+      if (attachFeedback) {
+        responseText += FEEDBACK_PROMPT;
+      }
 
       if (message.type === 'voice') {
         await this.sendVoiceResponse(message.from, responseText);
@@ -114,11 +170,18 @@ class FraudDetectionSystem {
         await this.whatsapp.sendTextMessage(message.from, responseText);
       }
 
+      if (attachFeedback) {
+        this.feedback.markPending(message.from, {
+          fraud_type: fraudResult.fraud_type,
+          is_fraud: fraudResult.is_fraud,
+        });
+      }
+
       if (fraudResult.warning_level === 'high' && process.env.FRAUD_ALERT_WEBHOOK) {
         await this.sendAlertToDashboard(fraudResult, userText, message.from);
       }
     } catch (err) {
-      logger.error('Failed to process message', { from: message.from, error: err.message });
+      logger.error('Failed to process message', { from: who, error: err.message });
 
       let errorReply;
       if (err.message === 'NO_TEXT_IN_IMAGE') {
@@ -136,7 +199,7 @@ class FraudDetectionSystem {
           await this.whatsapp.sendTextMessage(message.from, errorReply);
         }
       } catch (replyErr) {
-        logger.error('Failed to send error reply', { error: replyErr.message });
+        logger.error('Failed to send error reply', { from: who, error: replyErr.message });
       }
     } finally {
       await this.audioProcessor.cleanup(...tempFiles);
@@ -159,7 +222,7 @@ class FraudDetectionSystem {
     }
 
     const userText = await this.stt.transcribeUrdu(mp3Path);
-    logger.info('Voice transcribed', { from: message.from, preview: userText.slice(0, 80) });
+    logger.info('Voice transcribed', { from: hashSender(message.from), preview: safePreview(userText) });
     return userText;
   }
 
@@ -170,7 +233,7 @@ class FraudDetectionSystem {
     }
 
     const userText = await this.ocr.extractFromImage(media);
-    logger.info('Image text extracted', { from: message.from, preview: userText.slice(0, 80) });
+    logger.info('Image text extracted', { from: hashSender(message.from), preview: safePreview(userText) });
 
     if (!userText.trim()) {
       // Surface a clear message instead of running fraud analysis on empty text.
@@ -188,7 +251,7 @@ class FraudDetectionSystem {
 
     const isPdf = (media.mimetype || '').toLowerCase().includes('pdf');
     if (!isPdf) {
-      logger.info('Unsupported document type received', { from: message.from, mimetype: media.mimetype });
+      logger.info('Unsupported document type received', { from: hashSender(message.from), mimetype: media.mimetype });
       return {
         reply: 'معذرت، فی الحال صرف PDF فائلیں چیک کی جا سکتی ہیں۔ آپ متن، تصویر یا وائس نوٹ بھی بھیج سکتے ہیں۔',
       };
@@ -196,7 +259,11 @@ class FraudDetectionSystem {
 
     const buffer = Buffer.from(media.data, 'base64');
     const { text, totalPages, truncated } = await this.pdf.extractFirstPages(buffer);
-    logger.info('PDF text extracted', { from: message.from, totalPages, preview: text.slice(0, 80) });
+    logger.info('PDF text extracted', {
+      from: hashSender(message.from),
+      totalPages,
+      preview: safePreview(text),
+    });
 
     if (!text.trim()) {
       return {
@@ -232,11 +299,12 @@ class FraudDetectionSystem {
         fraud_type: fraudResult.fraud_type,
         confidence: fraudResult.confidence,
         warning_level: fraudResult.warning_level,
-        user_message: userText,
+        // PII redacted before leaving the process (guardrail #3).
+        user_message: redactPII(userText),
         response_text: fraudResult.response_text,
       }, { timeout: 10000 });
 
-      logger.audit('high_risk_alert_sent', { from, fraud_type: fraudResult.fraud_type });
+      logger.audit('high_risk_alert_sent', { from: hashSender(from), fraud_type: fraudResult.fraud_type });
     } catch (err) {
       logger.error('Failed to send fraud alert webhook', { error: err.message });
     }
