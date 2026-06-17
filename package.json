@@ -1,7 +1,7 @@
 {
   "name": "whatsapp-fraud-detection",
   "version": "1.0.0",
-  "description": "Urdu fraud detection via WhatsApp voice & text (OpenRouter)",
+  "description": "Urdu fraud detection via WhatsApp voice, text, image & PDF (OpenRouter)",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
@@ -16,6 +16,7 @@
     "dotenv": "^16.3.0",
     "ffmpeg-static": "^5.2.0",
     "fluent-ffmpeg": "^2.1.2",
+    "pdf-parse": "2.4.5",
     "qrcode": "^1.5.4",
     "qrcode-terminal": "^0.12.0",
     "whatsapp-web.js": "^1.23.0"

@@ -11,6 +11,14 @@ const config = {
   llmModel: process.env.OPENROUTER_LLM_MODEL || 'google/gemini-2.0-flash-lite-001',
 
 
+  // Vision model used to OCR text out of images. Defaults to the (multimodal)
+  // LLM model so no extra config is required.
+  visionModel:
+    process.env.OPENROUTER_VISION_MODEL ||
+    process.env.OPENROUTER_LLM_MODEL ||
+    'google/gemini-2.0-flash-lite-001',
+
+
   sttModel: process.env.OPENROUTER_STT_MODEL || 'openai/whisper-1',
 
 

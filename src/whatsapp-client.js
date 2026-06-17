@@ -65,17 +65,24 @@ class WhatsAppClient {
 
         const isVoiceNote = message.type === 'ptt';
         const isText = message.type === 'chat' || message.type === 'text';
+        const isImage = message.type === 'image';
+        const isDocument = message.type === 'document';
 
-        if (!isVoiceNote && !isText) {
+        if (!isVoiceNote && !isText && !isImage && !isDocument) {
           logger.debug('Ignoring unsupported message type', { type: message.type });
           return;
         }
 
+        let normalizedType = 'text';
+        if (isVoiceNote) normalizedType = 'voice';
+        else if (isImage) normalizedType = 'image';
+        else if (isDocument) normalizedType = 'document';
+
         await this.messageHandler({
-          type: isVoiceNote ? 'voice' : 'text',
+          type: normalizedType,
           data: message,
           from: message.from,
-          body: isVoiceNote ? null : message.body,
+          body: isText ? message.body : null,
         });
       } catch (err) {
         logger.error('Error in message event handler', { error: err.message });
