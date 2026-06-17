@@ -8,6 +8,7 @@ const ffmpeg = require('fluent-ffmpeg');
 const ffmpegPath = require('ffmpeg-static');
 const { config } = require('./config');
 const logger = require('./logger');
+const { hashSender } = require('./redact');
 
 ffmpeg.setFfmpegPath(ffmpegPath);
 
@@ -152,7 +153,7 @@ class WhatsAppClient {
 
   async sendTextMessage(to, text) {
     await this.client.sendMessage(to, text);
-    logger.audit('message_sent', { to, type: 'text', length: text.length });
+    logger.audit('message_sent', { to: hashSender(to), type: 'text', length: text.length });
   }
 
   async convertMp3ToVoiceOpus(audioBuffer) {
@@ -194,12 +195,12 @@ class WhatsAppClient {
         'response.ogg'
       );
       await this.client.sendMessage(to, media, { sendAudioAsVoice: true });
-      logger.audit('message_sent', { to, type: 'voice', bytes: voiceBuffer.length });
+      logger.audit('message_sent', { to: hashSender(to), type: 'voice', bytes: voiceBuffer.length });
     } catch (err) {
       logger.warn('Voice conversion failed, sending plain audio', { error: err.message });
       const media = new MessageMedia('audio/mpeg', audioBuffer.toString('base64'), 'response.mp3');
       await this.client.sendMessage(to, media);
-      logger.audit('message_sent', { to, type: 'audio', bytes: audioBuffer.length });
+      logger.audit('message_sent', { to: hashSender(to), type: 'audio', bytes: audioBuffer.length });
     }
   }
 }
