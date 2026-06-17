@@ -1,5 +1,5 @@
 const axios = require('axios');
-const { stripSpeechFormatting } = require('./urdu-to-hindi');
+const { stripSpeechFormatting } = require('./speech-text');
 const logger = require('./logger');
 
 class TTSService {

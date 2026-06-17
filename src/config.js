@@ -14,10 +14,6 @@ const config = {
   sttModel: process.env.OPENROUTER_STT_MODEL || 'openai/whisper-1',
 
 
-  ttsModel: process.env.OPENROUTER_TTS_MODEL || 'hexgrad/kokoro-82m',
-  ttsVoice: process.env.OPENROUTER_TTS_VOICE || 'hf_alpha',
-  ttsFormat: process.env.OPENROUTER_TTS_FORMAT || 'mp3',
-
   sessionStorage: process.env.SESSION_STORAGE || './temp/sessions',
   fraudAlertWebhook: process.env.FRAUD_ALERT_WEBHOOK || '',
   logLevel: process.env.LOG_LEVEL || 'info',

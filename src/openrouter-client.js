@@ -102,42 +102,6 @@ class OpenRouterClient {
     return text;
   }
 
-  
-  async synthesizeSpeech(text) {
-    let response;
-    try {
-      response = await axios.post(
-        `${BASE_URL}/audio/speech`,
-        {
-          model: config.ttsModel,
-          input: text,
-          voice: config.ttsVoice,
-          response_format: config.ttsFormat,
-        },
-        {
-          headers: this.headers,
-          timeout: 120000,
-          responseType: 'arraybuffer',
-        }
-      );
-    } catch (err) {
-      throw new Error(`OpenRouter TTS failed (${formatAxiosError(err)})`);
-    }
-
-    const buffer = Buffer.from(response.data);
-    if (!buffer.length) {
-      throw new Error('OpenRouter TTS returned empty audio');
-    }
-
-    logger.debug('OpenRouter TTS complete', {
-      model: config.ttsModel,
-      voice: config.ttsVoice,
-      bytes: buffer.length,
-    });
-
-    return buffer;
-  }
-
   getAudioFormat(filePath) {
     const ext = path.extname(filePath).replace('.', '').toLowerCase();
     const supported = ['wav', 'mp3', 'flac', 'm4a', 'ogg', 'webm', 'aac'];

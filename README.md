@@ -87,8 +87,8 @@ The system is optimized for minimal runtime cost:
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/codewithfourtix/sayNoToFraud.git
-cd sayNoToFraud
+git clone https://github.com/codewithfourtix/sachbatao.git
+cd sachbatao
 ```
 
 ### 2. Configure Environment
@@ -152,11 +152,9 @@ sachbatao/
 │   ├── audio-processor.js   # Ffmpeg format conversions
 │   ├── config.js            # Configuration settings & fallback templates
 │   ├── logger.js            # Audit and logs recorder
-│   └── urdu-to-hindi.js     # Text normalization helpers
+│   └── speech-text.js       # Speech text cleanup helper (strips markdown for TTS)
 ├── scam_patterns.json       # Scam category database (patterns & keywords)
 ├── system_prompt.txt        # LLM system behavior instructions & JSON schema
-├── test_messages.json       # Verification test suite datasets
-├── test-runner.js           # Local test runner script
 ├── Dockerfile               # Docker specification
 ├── docker-compose.yml       # Docker orchestration config
 └── package.json             # Node dependencies and scripts
