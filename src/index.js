@@ -11,6 +11,7 @@ const { PDFService, MAX_PAGES } = require('./pdf-service');
 const RateLimiter = require('./rate-limiter');
 const { DisclosureTracker, DISCLOSURE_TEXT } = require('./disclosure');
 const { FeedbackTracker, FEEDBACK_PROMPT, FEEDBACK_THANKS } = require('./feedback');
+const { recordFeedback } = require('./feedback-store');
 const { AbuseMonitor } = require('./abuse-monitor');
 const { redactPII, hashSender, safePreview } = require('./redact');
 
@@ -66,11 +67,18 @@ class FraudDetectionSystem {
       const verdictFeedback = this.feedback.classify(message.from, message.body);
       if (verdictFeedback) {
         const pending = this.feedback.consume(message.from);
-        logger.audit('feedback', {
+        const record = {
           from: who,
           value: verdictFeedback,
           fraud_type: pending?.meta?.fraud_type || null,
-        });
+          is_fraud: pending?.meta?.is_fraud ?? null,
+          warning_level: pending?.meta?.warning_level || null,
+          confidence: pending?.meta?.confidence ?? null,
+        };
+        logger.audit('feedback', record);
+        // Durably persist the label on the volume (and webhook if configured),
+        // since the daily log file is wiped on every Railway redeploy.
+        await recordFeedback(record);
         try {
           await this.whatsapp.sendTextMessage(message.from, FEEDBACK_THANKS);
         } catch (err) {
@@ -174,6 +182,8 @@ class FraudDetectionSystem {
         this.feedback.markPending(message.from, {
           fraud_type: fraudResult.fraud_type,
           is_fraud: fraudResult.is_fraud,
+          warning_level: fraudResult.warning_level,
+          confidence: fraudResult.confidence,
         });
       }
 
